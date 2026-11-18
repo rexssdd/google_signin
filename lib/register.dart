@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'auth_service.dart';
 import 'login.dart';
 
@@ -6,7 +7,7 @@ class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
@@ -14,6 +15,13 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController emailCtrl = TextEditingController();
   final TextEditingController passwordCtrl = TextEditingController();
   bool loading = false;
+
+  @override
+  void dispose() {
+    emailCtrl.dispose();
+    passwordCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,30 +50,40 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: loading ? null : () async {
-                if (emailCtrl.text.isEmpty || passwordCtrl.text.isEmpty) return;
-                setState(() => loading = true);
-                final user = await auth.registerWithEmail(
-                    emailCtrl.text, passwordCtrl.text);
-                if (user != null) {
-                  await user.sendEmailVerification();
-                }
-                if (!mounted) return;
-                setState(() => loading = false);
-                if (user != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text(
-                      'Verification email sent. Please check your inbox.')),
-                  );
-                  Navigator.pushReplacement(
-                    context, MaterialPageRoute(builder: (_) => const LoginPage()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Registration failed!')),
-                  );
-                }
-              },
+              onPressed: loading
+                  ? null
+                  : () async {
+                      if (emailCtrl.text.isEmpty || passwordCtrl.text.isEmpty) {
+                        return;
+                      }
+                      setState(() => loading = true);
+                      final user = await auth.registerWithEmail(
+                        emailCtrl.text,
+                        passwordCtrl.text,
+                      );
+                      if (user != null) {
+                        await user.sendEmailVerification();
+                      }
+                      if (!mounted || !context.mounted) return;
+                      setState(() => loading = false);
+                      if (user != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Verification email sent. Please check your inbox.',
+                            ),
+                          ),
+                        );
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Registration failed!')),
+                        );
+                      }
+                    },
               child: loading
                   ? const CircularProgressIndicator()
                   : const Text('Register'),
@@ -76,8 +94,10 @@ class _RegisterPageState extends State<RegisterPage> {
               children: [
                 const Text('Already have an account?'),
                 TextButton(
-                  onPressed: () => Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (_) => const LoginPage())),
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                  ),
                   child: const Text('Login'),
                 ),
               ],

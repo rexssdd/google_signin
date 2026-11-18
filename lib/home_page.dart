@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'crud_service.dart';
 import 'auth_service.dart';
 import 'login.dart';
@@ -16,7 +17,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(
-        title: const Text('Firebase Lastname'),
+        title: const Text('Firebase Lusica'),
         centerTitle: true,
         backgroundColor: Colors.teal,
         actions: [
@@ -43,6 +44,11 @@ class HomePage extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: service.getItems(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Unable to load items: ${snapshot.error}'),
+            );
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -64,8 +70,10 @@ class HomePage extends StatelessWidget {
                 ),
                 margin: const EdgeInsets.symmetric(vertical: 6),
                 child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   title: Text(
                     item['name'],
                     style: const TextStyle(
@@ -73,8 +81,10 @@ class HomePage extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  subtitle: Text('Quantity ${item['quantity']}',
-                      style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                  subtitle: Text(
+                    'Quantity ${item['quantity']}',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -224,7 +234,10 @@ class HomePage extends StatelessWidget {
             onPressed: () {
               if (nameCtrl.text.isNotEmpty && qtyCtrl.text.isNotEmpty) {
                 service.updateItem(
-                    item.id, nameCtrl.text, int.parse(qtyCtrl.text));
+                  item.id,
+                  nameCtrl.text,
+                  int.parse(qtyCtrl.text),
+                );
                 Navigator.pop(context);
               }
             },
