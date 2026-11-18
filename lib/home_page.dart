@@ -18,6 +18,7 @@ class HomePage extends StatelessWidget {
       backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Firebase Lusica'),
+        foregroundColor: Colors.white,
         centerTitle: true,
         backgroundColor: Colors.teal,
         actions: [
