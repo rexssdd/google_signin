@@ -27,82 +27,99 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Register')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: emailCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: passwordCtrl,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: loading
-                  ? null
-                  : () async {
-                      if (emailCtrl.text.isEmpty || passwordCtrl.text.isEmpty) {
-                        return;
-                      }
-                      setState(() => loading = true);
-                      final user = await auth.registerWithEmail(
-                        emailCtrl.text,
-                        passwordCtrl.text,
-                      );
-                      if (user != null) {
-                        await user.sendEmailVerification();
-                      }
-                      if (!mounted || !context.mounted) return;
-                      setState(() => loading = false);
-                      if (user != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Verification email sent. Please check your inbox.',
-                            ),
-                          ),
-                        );
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginPage()),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Registration failed!')),
-                        );
-                      }
-                    },
-              child: loading
-                  ? const CircularProgressIndicator()
-                  : const Text('Register'),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Already have an account?'),
-                TextButton(
-                  onPressed: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginPage()),
-                  ),
-                  child: const Text('Login'),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: loading
+                    ? null
+                    : () async {
+                        if (emailCtrl.text.isEmpty ||
+                            passwordCtrl.text.isEmpty) {
+                          return;
+                        }
+                        setState(() => loading = true);
+                        try {
+                          final user = await auth.registerWithEmail(
+                            emailCtrl.text.trim(),
+                            passwordCtrl.text,
+                          );
+                          if (user != null && !user.emailVerified) {
+                            await user.sendEmailVerification();
+                          }
+                          if (user != null) await auth.signOut();
+                          if (!mounted || !context.mounted) return;
+                          setState(() => loading = false);
+                          if (user != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Verification email sent. Please check your inbox.',
+                                ),
+                              ),
+                            );
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginPage(),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Registration failed!'),
+                              ),
+                            );
+                          }
+                        } catch (error) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Unable to send the verification email. Please try again.',
+                              ),
+                            ),
+                          );
+                        } finally {
+                          if (mounted) setState(() => loading = false);
+                        }
+                      },
+                child: loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Register'),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                ),
+                child: const Text('Already have an account? Login'),
+              ),
+            ],
+          ),
         ),
       ),
     );

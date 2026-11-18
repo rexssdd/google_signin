@@ -5,12 +5,24 @@ import 'crud_service.dart';
 import 'auth_service.dart';
 import 'login.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   final CrudService service = CrudService();
   final TextEditingController nameCtrl = TextEditingController();
   final TextEditingController qtyCtrl = TextEditingController();
 
-  HomePage({super.key});
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    qtyCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +30,26 @@ class HomePage extends StatelessWidget {
       backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Firebase Lusica'),
-        foregroundColor: Colors.white,
         centerTitle: true,
         backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
+            tooltip: 'Sign out',
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await AuthService().signOut();
+              try {
+                await AuthService().signOut();
+              } catch (error) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Unable to sign out. Please try again.'),
+                    ),
+                  );
+                }
+                return;
+              }
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
@@ -152,6 +176,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               controller: qtyCtrl,
+              keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: 'Quantity',
                 border: OutlineInputBorder(
@@ -175,8 +200,11 @@ class HomePage extends StatelessWidget {
             ),
             child: const Text('Save'),
             onPressed: () {
-              if (nameCtrl.text.isNotEmpty && qtyCtrl.text.isNotEmpty) {
-                service.addItem(nameCtrl.text, int.parse(qtyCtrl.text));
+              final quantity = int.tryParse(qtyCtrl.text.trim());
+              if (nameCtrl.text.trim().isNotEmpty &&
+                  quantity != null &&
+                  quantity >= 0) {
+                service.addItem(nameCtrl.text.trim(), quantity);
                 Navigator.pop(context);
               }
             },
@@ -210,6 +238,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               controller: qtyCtrl,
+              keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: 'Quantity',
                 border: OutlineInputBorder(
@@ -233,12 +262,11 @@ class HomePage extends StatelessWidget {
             ),
             child: const Text('Update'),
             onPressed: () {
-              if (nameCtrl.text.isNotEmpty && qtyCtrl.text.isNotEmpty) {
-                service.updateItem(
-                  item.id,
-                  nameCtrl.text,
-                  int.parse(qtyCtrl.text),
-                );
+              final quantity = int.tryParse(qtyCtrl.text.trim());
+              if (nameCtrl.text.trim().isNotEmpty &&
+                  quantity != null &&
+                  quantity >= 0) {
+                service.updateItem(item.id, nameCtrl.text.trim(), quantity);
                 Navigator.pop(context);
               }
             },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'auth_service.dart';
+import 'home_page.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
@@ -35,6 +36,8 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               TextField(
                 controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
@@ -60,12 +63,27 @@ class _LoginPageState extends State<LoginPage> {
                         }
                         setState(() => loading = true);
                         final user = await auth.signInWithEmail(
-                          emailCtrl.text,
+                          emailCtrl.text.trim(),
                           passwordCtrl.text,
                         );
                         if (!mounted || !context.mounted) return;
                         setState(() => loading = false);
-                        if (user == null) {
+                        if (user != null && !user.emailVerified) {
+                          await auth.signOut();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Please verify your email before logging in.',
+                              ),
+                            ),
+                          );
+                        } else if (user != null) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const HomePage()),
+                          );
+                        } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Invalid email or password'),
@@ -75,11 +93,20 @@ class _LoginPageState extends State<LoginPage> {
                       },
                 child: loading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Login'),
+                    : const Text('Login with Email'),
               ),
-              const SizedBox(height: 12),
-              const Text('OR'),
-              const SizedBox(height: 12),
+              const SizedBox(height: 24),
+              const Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Text('OR'),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 24),
               ElevatedButton.icon(
                 icon: const Icon(Icons.login),
                 label: const Text('Sign in with Google'),
@@ -88,7 +115,15 @@ class _LoginPageState extends State<LoginPage> {
                     : () async {
                         setState(() => loading = true);
                         try {
-                          await auth.signInWithGoogle();
+                          final user = await auth.signInWithGoogle();
+                          if (user != null && context.mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HomePage(),
+                              ),
+                            );
+                          }
                         } catch (e) {
                           if (mounted && context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -102,18 +137,12 @@ class _LoginPageState extends State<LoginPage> {
                       },
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Don't have an account?"),
-                  TextButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RegisterPage()),
-                    ),
-                    child: const Text('Register'),
-                  ),
-                ],
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterPage()),
+                ),
+                child: const Text("Don't have an account? Register"),
               ),
             ],
           ),

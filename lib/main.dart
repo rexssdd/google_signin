@@ -54,8 +54,8 @@ class MyApp extends StatelessWidget {
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          if (snapshot.hasData) {
-            return HomePage();
+          if (snapshot.hasData && snapshot.data!.emailVerified) {
+            return const HomePage();
           }
           return const LoginPage();
         },
