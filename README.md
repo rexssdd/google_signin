@@ -6,8 +6,8 @@ This Flutter app stores items in Firestore and uploads an optional item image to
 
 1. In Cloudinary, find your **cloud name** on the dashboard.
 2. In **Settings → Upload → Upload presets**, create an **unsigned** upload preset. Do not put an API secret in the Flutter app.
-3. Copy `cloudinary.example.json` to `cloudinary.json` and fill in your cloud name and unsigned preset. `cloudinary.json` is ignored by Git.
-4. Run the app with the configuration:
+3. The app has a default cloud name and preset, so `flutter run` uses the current Cloudinary setup. To use another Cloudinary account, copy `cloudinary.example.json` to `cloudinary.json` and replace its values. `cloudinary.json` is ignored by Git.
+4. Run with the alternate configuration:
 
    ```sh
    flutter run --dart-define-from-file=cloudinary.json

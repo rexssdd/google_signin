@@ -260,7 +260,7 @@ class _HomePageState extends State<HomePage> {
                       : () async {
                           setDialogState(() => isUploading = true);
                           try {
-                            final picked = await service.pickImageForAddItem();
+                            final picked = await service.pickImageForItem();
                             if (picked != null && dialogContext.mounted) {
                               setDialogState(() {
                                 selectedImageBytes = picked.bytes;
@@ -336,62 +336,147 @@ class _HomePageState extends State<HomePage> {
 
   // EDIT UI
   void openEditDialog(BuildContext context, DocumentSnapshot item) {
-    nameCtrl.text = item['name'];
-    qtyCtrl.text = item['quantity'].toString();
+    final data = item.data() as Map<String, dynamic>;
+    nameCtrl.text = data['name'] as String? ?? '';
+    qtyCtrl.text = (data['quantity'] ?? 0).toString();
+    final currentImageUrl = data['image_url'] as String?;
+    Uint8List? selectedImageBytes;
+    String? selectedImageUrl;
+    bool isUploading = false;
+    bool isSaving = false;
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Edit item'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit item'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: qtyCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Quantity',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (selectedImageBytes != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      selectedImageBytes!,
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else if (currentImageUrl != null && currentImageUrl.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      currentImageUrl,
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.broken_image, size: 120),
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.image),
+                  label: Text(isUploading ? 'Uploading...' : 'Change Image'),
+                  onPressed: isUploading || isSaving
+                      ? null
+                      : () async {
+                          setDialogState(() => isUploading = true);
+                          try {
+                            final picked = await service.pickImageForItem();
+                            if (picked != null && dialogContext.mounted) {
+                              setDialogState(() {
+                                selectedImageBytes = picked.bytes;
+                                selectedImageUrl = picked.url;
+                              });
+                            }
+                          } catch (error) {
+                            if (dialogContext.mounted) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(
+                                  content: Text('Image upload failed: $error'),
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (dialogContext.mounted) {
+                              setDialogState(() => isUploading = false);
+                            }
+                          }
+                        },
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: qtyCtrl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Quantity',
-                border: OutlineInputBorder(
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
+              onPressed: isSaving || isUploading
+                  ? null
+                  : () async {
+                      final quantity = int.tryParse(qtyCtrl.text.trim());
+                      if (nameCtrl.text.trim().isNotEmpty &&
+                          quantity != null &&
+                          quantity >= 0) {
+                        setDialogState(() => isSaving = true);
+                        try {
+                          await service.updateItem(
+                            item.id,
+                            nameCtrl.text.trim(),
+                            quantity,
+                            imageUrl: selectedImageUrl,
+                          );
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext);
+                          }
+                        } catch (error) {
+                          if (dialogContext.mounted) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              SnackBar(
+                                content: Text('Unable to update item: $error'),
+                              ),
+                            );
+                            setDialogState(() => isSaving = false);
+                          }
+                        }
+                      }
+                    },
+              child: Text(isSaving ? 'Updating...' : 'Update'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Update'),
-            onPressed: () {
-              final quantity = int.tryParse(qtyCtrl.text.trim());
-              if (nameCtrl.text.trim().isNotEmpty &&
-                  quantity != null &&
-                  quantity >= 0) {
-                service.updateItem(item.id, nameCtrl.text.trim(), quantity);
-                Navigator.pop(context);
-              }
-            },
-          ),
-        ],
       ),
     );
   }

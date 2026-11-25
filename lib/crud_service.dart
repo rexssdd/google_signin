@@ -13,9 +13,13 @@ class PickedImage {
 }
 
 class CrudService {
-  static const cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME');
+  static const cloudName = String.fromEnvironment(
+    'CLOUDINARY_CLOUD_NAME',
+    defaultValue: 'a78gezpf',
+  );
   static const uploadPreset = String.fromEnvironment(
     'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: 'Cloudinary',
   );
 
   final CollectionReference items = FirebaseFirestore.instance.collection(
@@ -23,12 +27,12 @@ class CrudService {
   );
   final ImagePicker _picker = ImagePicker();
 
-  Future<PickedImage?> pickImageForAddItem() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile == null) return null;
+  Future<PickedImage?> pickImageForItem() async {
     if (cloudName.isEmpty || uploadPreset.isEmpty) {
       throw StateError('Cloudinary cloud name and upload preset are required.');
     }
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return null;
 
     final bytes = await pickedFile.readAsBytes();
     final cloudinary = CloudinaryPublic(cloudName, uploadPreset, cache: false);
@@ -68,8 +72,17 @@ class CrudService {
   }
 
   // UPDATE
-  Future<void> updateItem(String id, String name, int quantity) {
-    return items.doc(id).update({'name': name, 'quantity': quantity});
+  Future<void> updateItem(
+    String id,
+    String name,
+    int quantity, {
+    String? imageUrl,
+  }) {
+    final updates = <String, dynamic>{'name': name, 'quantity': quantity};
+    if (imageUrl != null) {
+      updates['image_url'] = imageUrl;
+    }
+    return items.doc(id).update(updates);
   }
 
   // FAVORITES
