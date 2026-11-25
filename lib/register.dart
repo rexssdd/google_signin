@@ -76,7 +76,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  'Verification email sent. Please check your inbox.',
+                                  'Gmail account created successfully! Please check your email for verification.',
                                 ),
                               ),
                             );

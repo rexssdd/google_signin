@@ -1,14 +1,63 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
+
+class PickedImage {
+  final Uint8List bytes;
+  final String url;
+
+  PickedImage({required this.bytes, required this.url});
+}
 
 class CrudService {
-  final CollectionReference items =
-      FirebaseFirestore.instance.collection('items');
+  static const cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME');
+  static const uploadPreset = String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_PRESET',
+  );
 
-  Future<void> addItem(String name, int quantity) async {
+  final CollectionReference items = FirebaseFirestore.instance.collection(
+    'items',
+  );
+  final ImagePicker _picker = ImagePicker();
+
+  Future<PickedImage?> pickImageForAddItem() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return null;
+    if (cloudName.isEmpty || uploadPreset.isEmpty) {
+      throw StateError('Cloudinary cloud name and upload preset are required.');
+    }
+
+    final bytes = await pickedFile.readAsBytes();
+    final cloudinary = CloudinaryPublic(cloudName, uploadPreset, cache: false);
+    final response = await cloudinary.uploadFile(
+      kIsWeb
+          ? CloudinaryFile.fromBytesData(
+              bytes,
+              identifier: pickedFile.name,
+              resourceType: CloudinaryResourceType.Image,
+            )
+          : CloudinaryFile.fromFile(
+              File(pickedFile.path).path,
+              resourceType: CloudinaryResourceType.Image,
+            ),
+    );
+    return PickedImage(bytes: bytes, url: response.secureUrl);
+  }
+
+  Future<void> addItemWithImage(
+    String name,
+    int quantity,
+    String? imageUrl,
+  ) async {
     // CREATE
     await items.add({
       'name': name,
       'quantity': quantity,
+      'image_url': imageUrl,
+      'favorite': false,
       'createdAt': Timestamp.now(),
     });
   }
@@ -20,10 +69,12 @@ class CrudService {
 
   // UPDATE
   Future<void> updateItem(String id, String name, int quantity) {
-    return items.doc(id).update({
-      'name': name,
-      'quantity': quantity,
-    });
+    return items.doc(id).update({'name': name, 'quantity': quantity});
+  }
+
+  // FAVORITES
+  Future<void> setFavorite(String id, bool isFavorite) {
+    return items.doc(id).update({'favorite': isFavorite});
   }
 
   // DELETE
